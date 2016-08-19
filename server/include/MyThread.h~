@@ -1,0 +1,33 @@
+#if !defined(_MYTHREAD_H)
+#define _MYTHREAD_H
+
+#include "ThreadPool.h"
+#include "Chosed_Str.h"
+#include "MyCompareDoc.h"
+#include "MyJson.h"
+
+class ThreadPool;
+
+class MyThread : public Thread
+{
+public:
+
+	void setPThPool(ThreadPool * p);
+	void start() ;
+	MyThread(){}
+	std::map<std::string , std::string  > th_cache;
+protected:
+	struct epoll_event ev;
+	int dp[MAXLINE][MAXLINE];
+	int calcDidstanc(std::vector<std::string> pstr1, int len1, std::vector<std::string> pstr2, int len2);
+	std::vector<std::string>  StrToVec(std::string word);
+	void  readtask()  ;
+	std::string RunTask(std::string);
+	bool  find_txt(std::vector<std::string>& qurey_vec, std::vector<std::pair< int, std::vector<double> > >& res_vec);
+	std::string excute_qurey(std::vector<std::string> qurey_vec );
+	static void* call_back(void *args);  
+};
+
+
+#endif
+

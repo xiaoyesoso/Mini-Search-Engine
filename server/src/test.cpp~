@@ -1,0 +1,162 @@
+/*************************************************************************
+	> File Name: test.cpp
+	> Author: Comst
+	> Mail:750145240@qq.com 
+	> Created Time: Sat 17 May 2014 07:43:58 PM CST
+ ************************************************************************/
+#include <utility>
+#include "test.h"
+#include <string.h>
+#include <algorithm>
+#include <functional>
+#include <map>
+//建立倒排索引
+//page_vec存放网页库中所有的文档对象，index_map用来保存建立的倒排索引，该倒排索引结构为：
+//word: docid1 frequency1 docid2 frequency2 ...
+void invert_index(std::vector<MyPage>& page_vec, std::map<std::string, std::vector<std::pair<int,int> > >& index_map)
+{
+	int index ;
+	//遍历每一个MyPage对象
+	for(index = 0 ; index != page_vec.size(); index ++)
+	{
+		std::map<std::string, int >::iterator iter ;
+		for(iter = ( page_vec[index].m_wordmap).begin() ; iter != page_vec[index].m_wordmap.end(); iter ++ )
+		{
+			index_map[iter -> first].push_back(std::make_pair(atoi(page_vec[index].m_docid.c_str()),iter -> second  ) );
+		}
+	}
+}
+static void remove_dup(std::vector<MyPage>& page_vec)
+{
+	std::vector<MyPage>::iterator iter ;
+	for(iter = page_vec.begin() ; iter + 1 != page_vec.end(); iter ++)
+	{
+		remove(iter + 1, page_vec.end(), *iter);
+	}
+}
+//网页去重
+static void remove_dup2(std::vector<MyPage>& page_vec)
+{
+	int indexi , indexj ;
+	for(indexi = 0 ; indexi!= page_vec.size() - 1; indexi ++)
+	{
+		for(indexj = indexi + 1 ; indexj != page_vec.size(); indexj ++)
+		{
+			if(page_vec[indexi] == page_vec[indexj])
+			{
+				MyPage tmp = page_vec[indexj] ;
+				page_vec[indexj] = page_vec[page_vec.size() - 1] ;
+				page_vec[page_vec.size() - 1] = tmp ;
+				page_vec.pop_back() ;
+				indexj -- ;
+			}
+		}
+	}
+}
+//网页去重、建立倒排索引、将倒排索引保存到文件
+void testMyPage()
+{
+	//初始化一个配置对象
+	MyConf conf("../conf/my.conf");
+	//初始化一个分词对象
+	MySplit asplit(conf) ;
+	std::vector<MyPage> page_vec ;
+	//conf.show();
+	FILE * fp_ripepage = fopen(conf.m_conf["myripepage"].c_str(), "r");
+	if(fp_ripepage == NULL)
+	{
+		std::cout << "open ripepage fail " << std::endl ;
+		exit(0);
+	}
+	//MYHASHMAP::hash_map<int,std::pair<int, int> >::iterator iter = conf.m_offset.begin() ;
+		std::cout << "begin read ripepage" << std::endl ;
+		int i = 1 ;
+		//将网页库中的文档读到内存中，放在page_vec
+	while( i  <= 10475)
+	{
+		char * txt = new char[conf.m_offset[i].second + 1]() ;
+	//	fseek(fp_ripepage,conf.m_offset[i].first , SEEK_SET);
+		fread(txt, 1, conf.m_offset[i].second  , fp_ripepage);
+//		std::cout << txt << std::endl ;
+		MyPage apage(txt, conf, asplit);
+		page_vec.push_back(apage);
+		i ++  ;
+		if(i % 100 == 0)
+		{
+			std::cout << i << std::endl ;
+			std::cout << "page size:" << apage.size() << std::endl ;
+		}
+		delete [] txt ;
+	}
+	fclose(fp_ripepage);
+	std::cout <<" before page size : " <<page_vec.size() << std::endl ;
+		//网页去重
+	remove_dup2(page_vec);
+	std::cout <<" after page size: " << page_vec.size() << std::endl ;
+	std::map<std::string, std::vector<std::pair<int, int> > > index_map ;
+		//建立倒排索引
+	invert_index(page_vec, index_map);	
+    int page_index ;
+	std::ofstream fout(conf.m_conf["mynewoffset"].c_str());
+	if(!fout)
+	{
+		std::cout << "open mynewoffset fail " << std::endl ;
+		exit(0);
+	}
+	//将去重之后的文档的偏移信息重新保存到一个新的偏移文件中去
+	for(page_index = 0 ; page_index != page_vec.size(); page_index ++ )
+	{
+	fout << atoi(page_vec[page_index].m_docid.c_str()) <<"   "<<conf.m_offset[atoi(page_vec[page_index].m_docid.c_str()) ].first <<"   " <<conf.m_offset[atoi(page_vec[page_index].m_docid.c_str()) ].second << std::endl ;	
+	}
+	fout.close();
+	fout.clear();
+	//将倒排索引保存到文件中去，在写文件之前要将此在文档中的权重算出来一并保存到文件中去
+	fout.open(conf.m_conf["myinvertindex"].c_str());
+	if( !fout )
+	{
+		std::cout <<"open myinvertindex fail" << std::endl ;
+		exit(0);
+	}
+	//计算每篇文档中的词的权重（TF*IDF），并归一化
+    std::map<std::string, std::vector<std::pair<int, int> > >::iterator iter_invert ;
+    	//每篇文档的词的权重的平方和
+	std::map<int, double> sum_map ;
+	//sum_map 
+	//首先遍历一边倒排索引，求出每篇文档的的所有词的权重的平方和，用于归一化处理
+	for(iter_invert = index_map.begin() ; iter_invert != index_map.end(); iter_invert ++)
+	{
+		int df = (iter_invert -> second).size();
+		int page_num = page_vec.size();
+		double idf = log( (double)page_num/df + 0.05 )/log(2) ;
+		std::vector<std::pair<int, int> >::iterator iter_vec ;
+		for(iter_vec = (iter_invert -> second ).begin() ; iter_vec != (iter_invert ->second).end(); iter_vec ++)
+		{
+		  sum_map[iter_vec -> first] += pow( (iter_vec -> second)*idf , 2 );
+		}
+
+	}
+
+
+//write invert index
+//将倒排索引以及每个词在每篇在文档中的权重（归一化后的）写入文件。
+//文件的格式为每一行为一个词的倒排信息，每一行的格式为：
+//word docid1 frequency1 weight1 docid2 frequency2 weight2 ...
+	for(iter_invert = index_map.begin() ; iter_invert != index_map.end(); iter_invert ++)
+	{
+		fout << iter_invert -> first <<"   " ;
+
+		int df = (iter_invert -> second).size();
+		int page_num = page_vec.size();
+		double idf = log( (double)page_num/df + 0.05 )/log(2) ;
+		std::vector<std::pair<int, int> >::iterator iter_vec ;
+		for(iter_vec = (iter_invert -> second ).begin() ; iter_vec != (iter_invert ->second).end(); iter_vec ++)
+		{
+			double word_w = ( (iter_vec -> second)*idf / sqrt( ( sum_map[iter_vec -> first] ) ) ) ;
+		   fout << 	iter_vec -> first <<"  " << iter_vec -> second <<"  " << word_w<<"   ";
+		}
+		fout << std::endl ;
+	}
+	fout.close();
+	std::cout << "index_invert over !" << std::endl ;
+
+}

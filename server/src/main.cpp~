@@ -1,0 +1,35 @@
+#include "MyConf.h"
+#include "MyLock.h"
+#include "MyCondition.h"
+#include "User_Data.h"
+#include "Chosed_Str.h"
+#include "ThreadPool.h"
+#include "MySocket.h"
+#include "test.h"
+//#define OPEN_MAX 100 
+//#define INFTIM 1000 
+
+
+void spellcorrect()
+{
+	MyConf myconf("./conf/my.conf");
+	myconf.Index_name = "../../../lib/index.lib";
+	myconf.word_fre_name = "../../../lib/Word_Fre.lib";
+	myconf.cache_name = "../../../lib/cache.lib";
+	strcpy( myconf.ConIP ,"127.0.0.1");
+	myconf.ConPort = 5555 ;
+	myconf.ListenQ = 20 ;
+	myconf.EpollQ = 20 ;
+	myconf.init();
+
+
+	MySplit txtsplit(myconf);
+	MYHASHMAP::hash_map<int, MyPage>  page_map ;
+	load_page_map(myconf,txtsplit ,page_map);	
+
+	ThreadPool th_Pool(myconf , 5 , txtsplit );
+	th_Pool.mysocket->init();
+	th_Pool.mysocket->RunSocket();
+	//return 0 ;
+}
+

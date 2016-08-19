@@ -1,0 +1,19 @@
+#if !defined(_T_P_CACHE_THREAD_H)
+#define _T_P_CACHE_THREAD_H
+#include "Thread.h"
+
+class T_P_Cache_Thread :public Thread
+{
+public:
+	void setPThPool(ThreadPool * p);
+	void start() ;
+	T_P_Cache_Thread(){}
+
+private:
+	static void* call_back(void *args); 
+	void  readtask()  ;
+
+};
+
+
+#endif

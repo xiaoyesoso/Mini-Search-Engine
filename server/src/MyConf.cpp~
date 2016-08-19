@@ -1,0 +1,193 @@
+#include "MyConf.h"
+#include <stdlib.h>
+#include <stdio.h>
+
+
+
+void MyConf::init(){
+		read_Index.open(Index_name.c_str());
+	if(!read_Index.is_open())
+		perror("read_Index");
+	Index_init();
+
+	std::cout << "Conf  Index Size  is " << Index.size() << std::endl;
+
+	read_word_fre.open(word_fre_name.c_str());
+	if(!read_word_fre.is_open())
+		perror("read_word_fre");
+	word_pre_init();
+
+	read_cache.open(cache_name.c_str());
+	if(!read_cache.is_open())
+		perror("read_cache");
+	cache_init();
+
+	
+	read_result.open(result_name.c_str());
+	if(!read_result.is_open())
+		perror("read_cache");
+	result_init();
+}
+
+
+
+
+
+
+void MyConf::Index_init() {
+	std::string cc;
+	int num ;
+	int i ;
+	std::string str;
+	while(read_Index >> cc >> num)
+	{
+		for( i = 0 ; i < num ; ++ i)
+		{
+			read_Index >> str ;
+			Index[cc].insert(str);
+		}
+	}
+}
+
+void MyConf::word_pre_init() {
+	int num ;
+	int i ;
+	std::string line,str;
+
+	while(std::getline(read_word_fre,line))
+	{
+		std::stringstream ss ;
+		ss << line ;
+		ss >> str >> num ;
+		word_fre[str] = num ;
+	}
+}
+
+void MyConf::cache_init() {
+	int num ;
+	int i ;
+	std::string name,str;
+	while(read_cache >> name >> str)
+	{
+		
+		cache[name] = str;
+	}
+}
+
+void MyConf::result_init(){
+	int num ;
+	std::string str ;
+	std::set<std::string> Settem;
+	while (read_result >> num)
+	{
+		std::cout << num ;
+		for(int i = 0 ;  i < num ; ++ i )
+		{
+			read_result >> str ;
+			std::cout << "	" << str ;
+			Settem.insert(str) ;
+		}
+		// n 为结果条数 ，每条 m 为向量个数
+		int n,m;
+		read_result >> n >> m ;
+		std::cout <<"	" << n << "	" << m;
+		std::vector<std::pair<int, std::vector<double> > >  Vre;
+
+		for(int i = 0  ;i < n ; ++i)
+		{
+			int id;
+			read_result >> id;
+			std::cout <<"	" << id;
+			std::vector<double> vv;
+			double dtem ;
+			for(int k = 0 ; k < m ; ++k)
+			{
+				read_result >> dtem ;
+				std::cout <<"	"<< dtem ; 
+				vv.push_back(dtem);
+			}
+
+			Vre.push_back( make_pair(id,vv) );
+		}
+
+		std::cout << std::endl;
+
+		result_cache[Settem] = Vre;
+	}
+}
+
+
+
+void MyConf::do_some(const std::string& conf_name)
+{
+	std::ifstream fin(conf_name.c_str()) ;
+	if(!fin)
+	{
+		std::cout << "open conf file faile !" << std::endl ;
+		exit(0);
+	}
+	std::string line , key, value;
+	while( getline(fin, line) )
+	{
+		std::cout << line << std::endl ;
+		std::istringstream sin(line);
+		sin >> key >> value ;
+		m_conf[key] = value ;
+	}
+	fin.close();
+	fin.clear();
+	fin.open(m_conf["mynewoffset"].c_str());
+	if(!fin)
+	{
+		std::cout << "open offset fail " << std::endl ;
+		exit(0);
+	}
+	int idocid, ioffset ,isize ;
+	line.clear();
+	while(getline(fin, line) )
+	{
+		std::istringstream sin(line);
+		sin >> idocid >> ioffset >> isize ;
+		m_offset[idocid].first = ioffset ;
+		m_offset[idocid].second = isize ;
+		//std::cout << idocid << "  " << ioffset << "   " << isize<< "   "<< std::endl;
+	}
+	fin.close();
+	fin.clear();
+	fin.open(m_conf["mystoplist"].c_str());
+	if(!fin)
+	{
+		std::cout << "open mystoplist fail " << std::endl ;
+		exit(0);
+	}
+	line.clear();
+	while(fin >> line)
+	{
+		m_stop[line] = line ;
+	}
+	fin.close();
+	fin.clear();
+	
+	fin.open(m_conf["myinvertindex"].c_str());
+	if(!fin)
+	{
+		std::cout << "open myinvertindex fail " << std::endl ;
+		exit(0);
+	}
+	line.clear();
+	while( getline(fin, line) )
+	{
+		std::istringstream sin(line);
+		std::string key ;
+		int docid , frequency;
+		double weight ;
+		sin >> key ;
+		while( sin >> docid >> frequency >> weight )
+		{
+			m_invert[key].insert(std::make_pair(docid, weight)) ;	
+		}
+	}
+	fin.close();
+}
+
+

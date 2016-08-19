@@ -1,0 +1,201 @@
+#include<stdio.h>
+#include<iostream>
+#include<fstream>
+#include<string>
+#include<ctype.h>
+#include<sstream>
+#include<map>
+#include<set>
+#include <vector>
+#include<stdlib.h>
+#include<string.h>
+#include<sys/types.h>
+#include<unistd.h>
+#include<dirent.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+
+std::map<std::string,int> word_fre; 
+
+std::map<std::string , std::set<std::string> > Index;
+
+void Eng_Lib_Read(std::string name)
+{
+	std::ifstream fin(name);
+	if(! fin.is_open())
+	{
+		perror(name.c_str());
+	}
+	else
+	{
+		std::cout <<name<<" OPENED" << std::endl;
+	}
+	std::string line;
+	while(std::getline(fin,line))
+	{
+		for(int i = 0 ;i < line.length() ; i++)
+		{
+			if(!isalnum(line[i]))
+			{
+				line[i] = ' ';
+			}
+			else if(line[i] >= 'A' && line[i] <= 'Z')
+				line[i] = line[i] -  'A' + 'a';
+		}						
+
+		std::stringstream ss;
+		ss<<line;
+		std::string word;
+		while(ss >> word)
+		{
+			int w_len = word.length();
+			for(int  i = 0 ;i < w_len ; ++ i)
+			{
+				std::string key ;
+				key = word.substr(i, 1);
+				Index[key].insert(word);
+			}
+			++word_fre[word]; 
+		}
+	}
+}
+
+
+void Cha_Lib_Read(std::string name)
+{
+	std::ifstream fin(name);
+	if(! fin.is_open())
+	{
+		perror(name.c_str());
+	}
+	else
+	{
+		std::cout <<name<<" OPENED" << std::endl;
+	}
+	std::string line;
+	while(std::getline(fin,line))
+	{
+		for(int i = 0 ;i < line.length() ; i++)
+		{
+			if(line[i] >= 0 && line[i] <= 128)
+			{
+				line[i] = ' ';
+			}
+		}						
+
+		std::stringstream ss;
+		ss<<line;
+		std::string word;
+		while(ss >> word)
+		{
+			int w_len = word.length();
+			printf("%s\n",word.c_str());
+			std::string key ;
+			for(int  i = 0 ;i < w_len ; ++ i)
+			{
+				if(word[i] & (1 << 4))
+				{
+					key = word.substr(i, 4);
+					i = i + 3;
+				}
+				else if(word[i] & (1 << 5))
+				{
+					key = word.substr(i, 3);
+					i = i + 2;
+				}
+				else if(word[i] & (1 << 6))
+				{
+					key = word.substr(i, 2);
+					i = i + 1;
+				}
+				printf("%s\n",key.c_str());
+				Index[key].insert(word);
+			}
+			++word_fre[word]; 
+		}
+	}
+}
+
+
+void scan_dir(char* dir,int val)
+{
+	DIR* pdir = opendir(dir);
+	char name[512] ="" ;
+	if(pdir == NULL)
+	{
+		perror("opendir");
+		exit(1);
+	}
+	struct dirent* pent ;
+	struct stat mystat ;
+	while( (pent = readdir(pdir)) != NULL )
+	{
+		if (strcmp(".", pent ->d_name) == 0 || \
+			strcmp("..", pent ->d_name) == 0 \
+			)
+		{
+			continue ;
+		}
+		memset(name, 0, 512);
+		sprintf(name, "%s/%s", dir, pent ->d_name);
+		char type[5] ;
+		int len = strlen(name);
+		int loc = 0;
+		for(int i = len-3 ; i <= len ; i++)
+			type[loc++] = name[i];
+		memset(&mystat, 0, sizeof(mystat));
+		if(lstat(name, &mystat ) == -1)
+		{
+			perror("lstat");
+			exit(1) ;
+		}
+		if(S_ISDIR(mystat.st_mode))
+		{
+			scan_dir(name,val);
+		}else if( strcmp(type,"txt")== 0)
+		{
+			if(val == 1)
+				Eng_Lib_Read(name);
+			else
+				Cha_Lib_Read(name);
+
+			printf("%s\n",name);
+		}
+
+	}
+	closedir(pdir);
+}
+
+
+int main()
+{
+	scan_dir("/home/soso/Desktop/MyMini/lib/data/Eng_lib",1);
+	scan_dir("/home/soso/Desktop/MyMini/lib/data/Cha_lib/res_lib",2);
+
+	std::ofstream Word_Fre_out("/home/soso/Desktop/MyMini/lib/data/Word_Fre.txt");
+	std::ofstream Index_out("/home/soso/Desktop/MyMini/lib/data/index.txt");
+	std::map<std::string,int>::iterator wit;
+	for( wit = word_fre.begin() ; wit != word_fre.end() ; ++ wit)
+	{
+		Word_Fre_out << wit->first <<"	"<<wit->second << std::endl;
+
+	}
+
+	std::map<std::string, std::set<std::string> >::iterator init;
+
+	for(init = Index.begin() ; init != Index.end() ; ++init)
+	{
+		Index_out << init->first <<"	"<< (init->second).size(); 
+		std::set<std::string>::iterator setit;
+		for(setit = (init->second).begin() ; setit != (init->second).end() ; ++ setit)
+			Index_out << "	" << *setit;
+		Index_out << std::endl;
+	}
+
+	return 0 ;
+}
+
+
+
+
+

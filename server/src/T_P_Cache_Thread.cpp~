@@ -1,0 +1,56 @@
+#include "Thread.h"
+#include "ThreadPool.h"
+void T_P_Cache_Thread::setPThPool(ThreadPool * p)
+{
+	pThPool = p ;
+}
+
+void T_P_Cache_Thread::start() 
+{
+	//生成线程 调用 回调函数
+	pthread_create(&m_tid, NULL, call_back,this);
+}
+
+void* T_P_Cache_Thread::call_back(void *args)
+{
+	std::cout << "call_back" << std::endl;
+	T_P_Cache_Thread * pThis = ( T_P_Cache_Thread *)args;
+	//回调类内的 readtask 函数
+	pThis ->readtask();
+}
+
+void T_P_Cache_Thread::readtask()
+{
+
+	std::map<std::string ,  std::string  >::iterator it ;
+	double th_end,th_start;
+	//每3秒钟 用 th_cache 更新 到线程池中 的 cache
+	// 再用 线程池中的 cache 更新 th_cache
+	th_end = (double)(clock() - th_start)/CLOCKS_PER_SEC;
+	//std::cout<<"th_end: = " <<th_end << std::endl;
+	while(1)
+	{
+		if(th_end * 1000 >= 10)   
+		{
+			for(int k = 0 ; k < pThPool->Th_Que.size() ; ++ k)
+			{
+				pThPool->Cache_Lock.Lock();
+				std::map<std::string , std::string  >::iterator it ;
+				for(it = pThPool->Th_Que[k]->th_cache.begin() ; it != pThPool->Th_Que[k]->th_cache.end() ; ++ it)
+				{
+					pThPool->cache[it->first] = it ->second; 
+				}
+				std::cout<<"cache renew"<<std::endl;
+				for(it = pThPool->cache.begin() ; it != pThPool->cache.end() ; ++ it)
+				{
+					pThPool->Th_Que[k]->th_cache[it->first] = it ->second; 
+				}
+				std::cout<<"th_cache renew"<<std::endl;
+				th_start = clock();
+				pThPool->Cache_Lock.Unlock();
+			}
+		}
+	}
+
+}
+

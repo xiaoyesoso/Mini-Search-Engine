@@ -1,0 +1,53 @@
+
+#include "Scan_Txt.h"
+
+std::vector<std::string> scan_dir(char* dir)
+{
+        std::vector<std::string>  dir_ans;
+	DIR* pdir = opendir(dir);
+	char name[128] ="" ;
+	if(pdir == NULL)
+	{
+		perror("opendir");
+		exit(1);
+	}
+	struct dirent* pent ;
+	struct stat mystat ;
+	while( (pent = readdir(pdir)) != NULL )
+	{
+		if (strcmp(".", pent ->d_name) == 0 || \
+			strcmp("..", pent ->d_name) == 0 \
+			)
+		{
+			continue ;
+		}
+		memset(name, 0, 128);
+		sprintf(name, "%s/%s", dir, pent ->d_name);
+		char type[5] ;
+		int len = strlen(name);
+		int loc = 0;
+		for(int i = len-3 ; i <= len ; i++)
+			type[loc++] = name[i];
+			memset(&mystat, 0, sizeof(mystat));
+		if(lstat(name, &mystat ) == -1)
+		{
+			perror("lstat");
+			exit(1) ;
+		}
+		if(S_ISDIR(mystat.st_mode))
+		{
+			scan_dir(name);
+		}else if( strcmp(type,"txt")== 0)
+		{
+			dir_ans.push_back(name);
+                        printf("%s\n",name);
+		}
+
+	}
+	closedir(pdir);
+
+
+
+}
+
+

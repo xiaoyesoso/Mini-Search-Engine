@@ -1,0 +1,8 @@
+mystoplist	 /home/dongyang/pagehandle/src/pagedup_remove/data/mystoplist.lib
+myictclas	 /home/dongyang/pagehandle/src/pagedup_remove/data
+myoffset	 /home/dongyang/pagehandle/src/pagedup_remove/offset.lib
+myripepage   /home/dongyang/pagehandle/src/pagedup_remove/ripepage.lib
+mynewoffset  /home/dongyang/pagehandle/src/pagedup_remove/data/new_offset.lib
+myinvertindex  /home/dongyang/pagehandle/src/pagedup_remove/data/invertindex.lib
+myip	127.0.0.1
+myport  5555

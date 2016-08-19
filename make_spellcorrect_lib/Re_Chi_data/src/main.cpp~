@@ -1,0 +1,88 @@
+#include <stdio.h>
+#include <string>
+#include <vector>
+#include <sstream>
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<sys/types.h>
+#include<unistd.h>
+#include<dirent.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+
+#include "NLPIR.h"
+
+int cnt = 0;
+
+void Res(std::string dir)
+{
+	printf("Input sentence now!\n");
+	std::stringstream ss ;
+	std::string str;
+	ss <<  "../../data/Chi/ReSource/"<< cnt << ".txt";
+	ss >> str;
+	NLPIR_FileProcess(dir.c_str(),str.c_str(), 1);
+	++cnt;
+}
+
+
+void scan_dir(char* dir)
+{
+	DIR* pdir = opendir(dir);
+	char name[512] ="" ;
+	if(pdir == NULL)
+	{
+		perror("opendir");
+		exit(1);
+	}
+	struct dirent* pent ;
+	struct stat mystat ;
+	while( (pent = readdir(pdir)) != NULL )
+	{
+		if (strcmp(".", pent ->d_name) == 0 || \
+			strcmp("..", pent ->d_name) == 0 \
+			)
+		{
+			continue ;
+		}
+		memset(name, 0, 512);
+		sprintf(name, "%s/%s", dir, pent ->d_name);
+		char type[5] ;
+		int len = strlen(name);
+		int loc = 0;
+		for(int i = len-3 ; i <= len ; i++)
+			type[loc++] = name[i];
+			memset(&mystat, 0, sizeof(mystat));
+		if(lstat(name, &mystat ) == -1)
+		{
+			perror("lstat");
+			exit(1) ;
+		}
+		if(S_ISDIR(mystat.st_mode))
+		{
+			scan_dir(name);
+		}else if( strcmp(type,"txt")== 0)
+		{
+			Res(name);
+                        printf("%s\n",name);
+		}
+
+	}
+	closedir(pdir);
+}
+
+
+
+int main(void)
+{
+	if(!NLPIR_Init("../", UTF8_CODE))
+	{
+		printf("init fails\n");
+		return -1;
+	}
+	scan_dir("../../data/Chi/source");
+	NLPIR_Exit();
+	return 0;
+}
+

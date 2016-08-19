@@ -1,0 +1,148 @@
+/*************************************************************************
+	> File Name: test.cpp
+	> Author: Comst
+	> Mail:750145240@qq.com 
+	> Created Time: Sat 17 May 2014 07:43:58 PM CST
+ ************************************************************************/
+#include <utility>
+#include "test.h"
+#include <string.h>
+#include <algorithm>
+#include <functional>
+#include <map>
+void invert_index(std::vector<MyPage>& page_vec, std::map<std::string, std::vector<std::pair<int,int> > >& index_map)
+{
+	int index ;
+	for(index = 0 ; index != page_vec.size(); index ++)
+	{
+		std::map<std::string, int >::iterator iter ;
+		for(iter = ( page_vec[index].m_wordmap).begin() ; iter != page_vec[index].m_wordmap.end(); iter ++ )
+		{
+			index_map[iter -> first].push_back(std::make_pair(atoi(page_vec[index].m_docid.c_str()),iter -> second  ) );
+		}
+	}
+}
+static void remove_dup(std::vector<MyPage>& page_vec)
+{
+	std::vector<MyPage>::iterator iter ;
+	for(iter = page_vec.begin() ; iter + 1 != page_vec.end(); iter ++)
+	{
+		remove(iter + 1, page_vec.end(), *iter);
+	}
+}
+static void remove_dup2(std::vector<MyPage>& page_vec)
+{
+	int indexi , indexj ;
+	for(indexi = 0 ; indexi!= page_vec.size() - 1; indexi ++)
+	{
+		for(indexj = indexi + 1 ; indexj != page_vec.size(); indexj ++)
+		{
+			if(page_vec[indexi] == page_vec[indexj])
+			{
+				MyPage tmp = page_vec[indexj] ;
+				page_vec[indexj] = page_vec[page_vec.size() - 1] ;
+				page_vec[page_vec.size() - 1] = tmp ;
+				page_vec.pop_back() ;
+				indexj -- ;
+			}
+		}
+	}
+}
+int  main()
+{
+	MyConf conf("./conf/my.conf");
+	std::cout << "open /conf/my.conf " << std::endl ;
+	MySplit asplit(conf) ;
+	std::vector<MyPage> page_vec ;
+	//conf.show();
+	FILE * fp_ripepage = fopen(conf.m_conf["myripepage"].c_str(), "r");
+	if(fp_ripepage == NULL)
+	{
+		std::cout << "open ripepage fail " << std::endl ;
+		exit(0);
+	}
+	//MYHASHMAP::hash_map<int,std::pair<int, int> >::iterator iter = conf.m_offset.begin() ;
+		std::cout << "begin read ripepage" << std::endl ;
+		int i = 1 ;
+	while( i  <= 9832)
+	{
+		std::cout << conf.m_offset[i].second + 1 << std::endl;
+		char * txt = new char[conf.m_offset[i].second + 1]() ;
+	//	fseek(fp_ripepage,conf.m_offset[i].first , SEEK_SET);
+		fread(txt, 1, conf.m_offset[i].second  , fp_ripepage);
+		std::cout << i << std::endl ;
+		std::cout << txt << std::endl ;
+		MyPage apage(txt, conf, asplit);
+		page_vec.push_back(apage);
+		i ++  ;
+		if(i % 100 == 0)
+		{
+			std::cout << i << std::endl ;
+			std::cout << "page size:" << apage.size() << std::endl ;
+		}
+		delete [] txt ;
+	}
+	fclose(fp_ripepage);
+	std::cout <<" before page size : " <<page_vec.size() << std::endl ;
+	remove_dup2(page_vec);
+	std::cout <<" after page size: " << page_vec.size() << std::endl ;
+	std::map<std::string, std::vector<std::pair<int, int> > > index_map ;
+	invert_index(page_vec, index_map);	
+    int page_index ;
+	std::ofstream fout(conf.m_conf["mynewoffset"].c_str());
+	if(!fout)
+	{
+		std::cout << "open mynewoffset fail " << std::endl ;
+		exit(0);
+	}
+
+	for(page_index = 0 ; page_index != page_vec.size(); page_index ++ )
+	{
+	fout << atoi(page_vec[page_index].m_docid.c_str()) <<"   "<<conf.m_offset[atoi(page_vec[page_index].m_docid.c_str()) ].first <<"   " <<conf.m_offset[atoi(page_vec[page_index].m_docid.c_str()) ].second << std::endl ;	
+	}
+	fout.close();
+	fout.clear();
+	fout.open(conf.m_conf["myinvertindex"].c_str());
+	if( !fout )
+	{
+		std::cout <<"open myinvertindex fail" << std::endl ;
+		exit(0);
+	}
+    std::map<std::string, std::vector<std::pair<int, int> > >::iterator iter_invert ;
+	std::map<int, double> sum_map ;
+	//sum_map 
+	for(iter_invert = index_map.begin() ; iter_invert != index_map.end(); iter_invert ++)
+	{
+		int df = (iter_invert -> second).size();
+		int page_num = page_vec.size();
+		double idf = log( (double)page_num/df + 0.05 )/log(2) ;
+		std::vector<std::pair<int, int> >::iterator iter_vec ;
+		for(iter_vec = (iter_invert -> second ).begin() ; iter_vec != (iter_invert ->second).end(); iter_vec ++)
+		{
+		  sum_map[iter_vec -> first] += pow( (iter_vec -> second)*idf , 2 );
+		}
+
+	}
+
+
+//write invert index
+	for(iter_invert = index_map.begin() ; iter_invert != index_map.end(); iter_invert ++)
+	{
+		fout << iter_invert -> first <<"   " ;
+
+		int df = (iter_invert -> second).size();
+		int page_num = page_vec.size();
+		double idf = log( (double)page_num/df + 0.05 )/log(2) ;
+		std::vector<std::pair<int, int> >::iterator iter_vec ;
+		for(iter_vec = (iter_invert -> second ).begin() ; iter_vec != (iter_invert ->second).end(); iter_vec ++)
+		{
+			double word_w = ( (iter_vec -> second)*idf / sqrt( ( sum_map[iter_vec -> first] ) ) ) ;
+		   fout << 	iter_vec -> first <<"  " << iter_vec -> second <<"  " << word_w<<"   ";
+		}
+		fout << std::endl ;
+	}
+	fout.close();
+	std::cout << "index_invert over !" << std::endl ;
+	return 0 ;
+
+}

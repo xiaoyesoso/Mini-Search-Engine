@@ -1,0 +1,82 @@
+/*************************************************************************
+	> File Name: MyConf.cpp
+	> Author: Comst
+	> Mail:750145240@qq.com 
+	> Created Time: Sat 17 May 2014 02:59:01 PM CST
+ ************************************************************************/
+
+#include "MyConf.h"
+#include <stdlib.h>
+#include <stdio.h>
+void MyConf::do_some(const std::string& conf_name)
+{
+	std::ifstream fin(conf_name.c_str()) ;
+	if(!fin)
+	{
+		std::cout << "open conf file faile !" << std::endl ;
+		exit(0);
+	}
+	std::string line , key, value;
+	while( getline(fin, line) )
+	{
+	//	std::cout << line << std::endl ;
+		std::istringstream sin(line);
+		sin >> key >> value ;
+		m_conf[key] = value ;
+	}
+	fin.close();
+	fin.clear();
+	fin.open(m_conf["mynewoffset"].c_str());
+	if(!fin)
+	{
+		std::cout << "open offset fail " << std::endl ;
+		exit(0);
+	}
+	int idocid, ioffset ,isize ;
+	line.clear();
+	while(getline(fin, line) )
+	{
+		std::istringstream sin(line);
+		sin >> idocid >> ioffset >> isize ;
+		m_offset[idocid].first = ioffset ;
+		m_offset[idocid].second = isize ;
+		std::cout << idocid << ioffset << isize << std::endl;
+	}
+	fin.close();
+	fin.clear();
+	fin.open(m_conf["mystoplist"].c_str());
+	if(!fin)
+	{
+		std::cout << "open mystoplist fail " << std::endl ;
+		exit(0);
+	}
+	line.clear();
+	while(fin >> line)
+	{
+		m_stop[line] = line ;
+	}
+	fin.close();
+	fin.clear();
+	
+	fin.open(m_conf["myinvertindex"].c_str());
+	if(!fin)
+	{
+		std::cout << "open myinvertindex fail " << std::endl ;
+		exit(0);
+	}
+	line.clear();
+	while( getline(fin, line) )
+	{
+		std::istringstream sin(line);
+		std::string key ;
+		int docid , frequency;
+		double weight ;
+		sin >> key ;
+		while( sin >> docid >> frequency >> weight )
+		{
+			m_invert[key].insert(std::make_pair(docid, weight)) ;	
+		}
+	}
+	fin.close();
+}
+

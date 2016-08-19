@@ -1,0 +1,65 @@
+/*************************************************************************
+	> File Name: test_main.cpp
+	> Author: Comst
+	> Mail:750145240@qq.com 
+	> Created Time: Sun 18 May 2014 12:26:22 AM CST
+ ************************************************************************/
+#include "test.h"
+//搜索引擎的主函数
+//该函数的框架为：
+//主函数socket循环accpet等待接受新的请求，一旦有请求则fork一个子进程，该子进程处理来自客户端的查询请求
+int main(int argc, char* argv[])
+{
+	//初始化一个conf对象，传入配置文件的路径
+	MyConf conf("./conf/my.conf");
+	//初始化一个分词对象，用于对文档分词
+	MySplit txtsplit(conf);
+	//保存网页库中文档的hash_map
+	MYHASHMAP::hash_map<int, MyPage>  page_map ;
+		//加载网页库
+	load_page_map(conf,txtsplit ,page_map);	
+	//初始化socket对象
+	MySocket asocket(conf.m_conf["myip"], conf.m_conf["myport"]);
+	std::cout <<"ready !" << std::endl ;
+	int fd_new ;
+	//循环等待客户端请求
+	while(fd_new = asocket.socket_accept())
+	{
+		//如果有请求则fork一个子进程，让该子进程处理客户端请求
+		pid_t pid = fork() ;
+		if(pid == 0)
+		{
+			char* buf = new char[1024 * 1024]();
+			//接受来自客户端的查询请求
+			int recvn = recv(fd_new, buf, 1024 * 1024, 0) ;
+			buf[recvn] = '\0';
+			//编码转换
+			//MyTransFormer trans("gbk", "utf-8");
+			//char* buf_gbk = new char[1024]();
+			//trans.convert(buf, recvn, buf_gbk, 1024);
+//执行查询逻辑
+			std::cout << buf << std::endl;
+			std::string res = excute_qurey(conf, txtsplit, page_map, buf );
+			std::cout <<"res: " << res.size() << std::endl ;
+				//将结果返回给客户端
+			int iret = send(fd_new, res.c_str(), res.size(), 0);
+			std::cout <<"send: " <<iret << std::endl ;
+			close(fd_new);
+			//delete [] buf_gbk ;
+			exit(0);
+
+		}else 
+		{
+			close(fd_new);
+			pid_t iret ;
+			//父进程回收子进程的资源，此时该函数为非阻塞模式
+			iret = waitpid(-1, NULL, WNOHANG);
+			if( iret > 0 )
+			{
+				std::cout << iret <<"return" << std::endl ;
+			}
+		}
+	}
+	return 0 ;
+}
+

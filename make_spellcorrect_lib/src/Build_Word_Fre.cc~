@@ -1,0 +1,84 @@
+#include<stdio.h>
+#include<iostream>
+#include<fstream>
+#include<string>
+#include<ctype.h>
+#include<sstream>
+#include<map>
+#include<set>
+#include "Scan_Txt.h"
+
+std::string namelist[5] = {"source1.txt","source2.txt","source3.txt"};
+
+std::map<std::string,int> word_fre; 
+std::map<char , std::set<std::string> > index;
+
+void Lib_Read(std::string name)
+{
+	std::string path = "/home/soso/Desktop/MyMini/lib/data/Eng_lib/";
+	std::string path_name = path + name;
+	std::ifstream fin(path_name);
+	if(! fin.is_open())
+	{
+		perror(name.c_str());
+	}
+	else
+	{
+		std::cout <<name<<" OPENED" << std::endl;
+	}
+	std::string line;
+	while(std::getline(fin,line))
+	{
+		for(int i = 0 ;i < line.length() ; i++)
+		{
+			if(!isalnum(line[i]))
+			{
+				line[i] = ' ';
+			}
+			else if(line[i] >= 'A' && line[i] <= 'Z')
+				line[i] = line[i] -  'A' + 'a';
+		}						
+
+		std::stringstream ss;
+		ss<<line;
+		std::string word;
+		while(ss >> word)
+		{
+			int w_len = word.length() ;
+			for(int  i = 0 ;i < w_len ; ++ i)
+			    index[word[i]].insert(word);
+			++word_fre[word]; 
+		}
+	}
+}
+
+
+
+int main()
+{
+
+	Lib_Read(namelist[0]);
+	Lib_Read(namelist[1]);
+	Lib_Read(namelist[2]);
+	std::ofstream Word_Fre_out("/home/soso/Desktop/MyMini/lib/data/Word_Fre.txt");
+	std::ofstream index_out("/home/soso/Desktop/MyMini/lib/data/index.txt");
+	std::map<std::string,int>::iterator wit;
+	for( wit = word_fre.begin() ; wit != word_fre.end() ; ++ wit)
+	{
+		Word_Fre_out << wit->first <<"	"<<wit->second << std::endl;
+
+	}
+
+	std::map<char , std::set<std::string> >::iterator init;
+
+	for(init = index.begin() ; init != index.end() ; ++init)
+	{
+		index_out << init->first <<"	"<< (init->second).size(); 
+		std::set<std::string>::iterator setit;
+		for(setit = (init->second).begin() ; setit != (init->second).end() ; ++ setit)
+			index_out << "	" << *setit;
+		index_out << std::endl;
+	}
+
+	return 0 ;
+}

@@ -1,0 +1,40 @@
+
+#if !defined(_MYSOCKET_H)
+#define _MYSOCKET_H
+
+#include "MyConf.h"
+#include "User_Data.h"
+#include "ThreadPool.h"
+
+class ThreadPool;
+
+class MySocket
+{
+public:
+	MySocket();
+	void init();
+	void RunSocket();
+	ThreadPool * PthPool;
+	char MyIP[MAXLINE];
+	int MyPort;
+	int MyListenQ,MyEpollQ;
+private:
+	int listenfd, connfd, sockfd, nfds ;
+	
+	clock_t Start;
+
+	double End;
+
+	struct sockaddr_in serveraddr; 
+	struct sockaddr_in clientaddr; 
+
+	User_Data *rdata;
+	socklen_t clilen; 
+	
+
+	void setnonblocking(int sock) ;
+	void Save();
+};
+
+
+#endif  

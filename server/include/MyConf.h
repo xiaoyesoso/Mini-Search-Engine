@@ -1,0 +1,85 @@
+
+#if !defined(_MYCONF_H)
+#define _MYCONF_H
+#define MAXLINE 512
+#define MYHASHMAP __gnu_cxx
+#include <map>
+#include <set>
+#include <vector>
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <iostream> 
+#include <sys/socket.h> 
+#include <netinet/in.h> 
+#include <arpa/inet.h> 
+#include <fcntl.h> 
+#include <unistd.h> 
+#include <stdio.h> 
+#include <pthread.h> 
+#include <errno.h> 
+#include <string.h>
+#include <stdlib.h>
+#include <queue>
+#include <sys/epoll.h> 
+#include <time.h>
+#include <iostream>
+#include <ext/hash_map>
+#include <math.h>
+
+
+class MyHashFn
+{
+	public:
+		std::size_t operator()(const std::string& str) const
+		{
+			return MYHASHMAP::__stl_hash_string(str.c_str()) ;
+		}
+};
+
+
+
+class MyConf {
+public:
+	void init();
+	MYHASHMAP::hash_map<std::string, std::set<std::string>, MyHashFn>  Index;  //纠错索引
+	MYHASHMAP::hash_map<std::string, int, MyHashFn> word_fre;   //词频
+	MYHASHMAP::hash_map<std::string, std::string, MyHashFn> cache; //纠错cache
+	
+	std::map< std::set<std::string> ,std::vector<std::pair<int, std::vector<double> > >  > result_cache;
+	std::ifstream read_Index;
+	std::ifstream read_word_fre;
+	std::ifstream read_cache;
+	std::ifstream read_result;
+	std::string  Index_name ;
+	std::string  word_fre_name ;
+	std::string  cache_name ;
+	std::string result_name;
+	char ConIP[MAXLINE];
+	int ConPort,ListenQ,EpollQ;
+
+
+MyConf(const std::string &conf_name)
+		{
+			do_some(conf_name);
+		}
+
+		MYHASHMAP::hash_map<std::string, std::string, MyHashFn> m_conf ;
+		MYHASHMAP::hash_map<int, std::pair<int, int> > m_offset ;
+		MYHASHMAP::hash_map<std::string, std::string, MyHashFn> m_stop ;
+		MYHASHMAP::hash_map<std::string, std::set<std::pair<int, double> >, MyHashFn> m_invert ; 
+
+
+
+private:
+	void Index_init();
+	void word_pre_init();
+	void cache_init();
+	void result_init();
+    void do_some(const std::string & conf_name) ;
+};
+
+#endif  //_MYCONF_H
+
+
+
